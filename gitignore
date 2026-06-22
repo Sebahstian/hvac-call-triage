@@ -1,0 +1,21 @@
+# Environment / secrets — never commit these
+.env
+.env.*
+*.key
+*.pem
+credentials.json
+
+# n8n local data (if you ever switch to a bind mount)
+.n8n/
+n8n_data/
+
+# macOS
+.DS_Store
+
+# Node (in case any tooling is added later)
+node_modules/
+npm-debug.log*
+
+# Editor
+.vscode/
+.idea/

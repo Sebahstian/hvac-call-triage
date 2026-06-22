@@ -1,0 +1,435 @@
+{
+  "name": "workflow",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "db621a41-1c67-4b8b-9e42-080d9cee07d1",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        208,
+        0
+      ],
+      "id": "f9a82c1b-d057-46a1-91fc-728d6e6f3846",
+      "name": "When chat message received",
+      "webhookId": "aba2a4f1-6507-485e-af3f-3a236fbfebf6"
+    },
+    {
+      "parameters": {
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "You are the intake assistant for an HVAC company. You read transcripts of missed customer calls and voicemails and extract the key details.  Classify urgency as exactly one of: - \"emergency\": no cooling in extreme heat or no heat in cold; ANY safety hazard (gas smell, rotten egg odor, burning smell, smoke, sparks, electrical or carbon monoxide concern); vulnerable people at risk. CRITICAL: a safety hazard is ALWAYS an emergency even if the caller says it's \"no rush,\" \"probably nothing,\" or sounds calm. Judge by the facts described, not the caller's tone. Return ONLY the raw JSON object. Do not wrap it in code fences or markdown. Do not add any explanation, notes, or text before or after the JSON.\nThe \"urgency\" field MUST be exactly one of these three lowercase strings: \"emergency\", \"soon\", or \"routine\". Never use any other value such as \"low\", \"high\", \"medium\", or \"normal\". A minor issue like a thermostat app, remote, or quote request is \"routine\". When uncertain between two urgency levels, always choose the more urgent one. It is far better to over-prioritize a routine call than to under-prioritize a real emergency."
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        416,
+        0
+      ],
+      "id": "68710267-a324-461b-a13d-ce00938b777e",
+      "name": "Basic LLM Chain",
+      "notesInFlow": false,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "model": "llama3.2:3b",
+        "options": {
+          "temperature": 0.1,
+          "numPredict": 512
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        384,
+        192
+      ],
+      "id": "8c46be33-b6ce-44e9-9ec6-a2de0ec9f2f9",
+      "name": "Ollama Chat Model",
+      "credentials": {
+        "ollamaApi": {
+          "id": "DGT0RMPcUAmjZfRo",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"customer_name\": \"Maria\",\n  \"phone\": \"817-555-0142\",\n  \"issue\": \"AC not cooling\",\n  \"urgency\": \"emergency\",\n  \"summary\": \"No cooling, 98F, newborn at home\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        592,
+        192
+      ],
+      "id": "ee537ad5-5ebc-4e48-b527-5802b19559b7",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "306aa30d-678d-4df8-ae67-53b8c9510587",
+                    "leftValue": "={{ $json.output.urgency }}",
+                    "rightValue": "emergency",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "05883a3e-c240-499e-af92-7e843c4dc5c0",
+                    "leftValue": "={{ $json.output.urgency }}",
+                    "rightValue": "soon",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "b58b3252-4bfe-44b2-addd-67e260e2dbec",
+                    "leftValue": "={{ $json.output.urgency }}",
+                    "rightValue": "routine",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        768,
+        -400
+      ],
+      "id": "2632186d-0a35-492c-a21d-3b50b5efd5cd",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "29642375-8762-4159-a7a6-b65917f3d975",
+              "name": "action",
+              "value": "Add to priority callback list. Schedule within 24–48 hours.",
+              "type": "string"
+            },
+            {
+              "id": "10086991-c3ae-4991-8325-f6ee3ef73858",
+              "name": "priority",
+              "value": "2",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1040,
+        -416
+      ],
+      "id": "dafb0870-6ba9-476e-9945-32540c687b65",
+      "name": "Soon – Same/Next Day1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "6d29a454-2159-479b-9a21-d4b774ef211b",
+              "name": "action",
+              "value": "=Call customer back within 15 minutes. Dispatch on-call tech if needed.",
+              "type": "string"
+            },
+            {
+              "id": "8f6b62ec-08e8-4a59-a741-39b767888cea",
+              "name": "priority",
+              "value": "1",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1040,
+        -576
+      ],
+      "id": "accc785a-8d68-4793-9df7-4650ba27c8f6",
+      "name": "Emergency – Immediate Callback"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0b2688ab-5723-4daf-84f8-94bd02dffec0",
+              "name": "action",
+              "value": "Model output could not be parsed. Human must review original transcript.",
+              "type": "string"
+            },
+            {
+              "id": "e676d052-580e-4b43-9210-0c3f3a9100bd",
+              "name": "priority",
+              "value": "1",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1040,
+        128
+      ],
+      "id": "f3ad592c-5664-4c9f-98fb-52ed17ceced5",
+      "name": "Parse Failed – Manual Review"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "60d3e52e-35e1-43f4-b9dc-a86e6fca8707",
+              "name": "action",
+              "value": "Urgency could not be classified. Flag for human review.",
+              "type": "string"
+            },
+            {
+              "id": "9342673e-46e2-4245-b526-648fc48ecbdd",
+              "name": "priority",
+              "value": "1",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1040,
+        -80
+      ],
+      "id": "cd7c3fa2-0677-4048-a3a0-5ea41d905713",
+      "name": "Unknown – Manual Review1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "5ca835a9-8e82-4512-8c5d-425891df895b",
+              "name": "action",
+              "value": "Add to normal callback queue. Respond within 2 business days.",
+              "type": "string"
+            },
+            {
+              "id": "d84cb09b-883e-43c0-93f3-88840ed71852",
+              "name": "priority",
+              "value": "3",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1040,
+        -256
+      ],
+      "id": "06e038ba-d8e2-4f11-886f-9e13a19b2942",
+      "name": "Routine - Standard Follow-up"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Parse Failed – Manual Review",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Emergency – Immediate Callback",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Soon – Same/Next Day1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Routine - Standard Follow-up",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Unknown – Manual Review1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "980e3afb-fa34-4d0b-9a24-6f5d26e86e36",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ddd6ccae7386cf242bda958deb751cf19bf39db4430e828ca583fde747879608"
+  },
+  "nodeGroups": [],
+  "id": "LlvNNXtfZxjVCoPq",
+  "tags": []
+}
